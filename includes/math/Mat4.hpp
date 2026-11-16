@@ -1,7 +1,8 @@
 #ifndef SCOP_MAT4_HPP
 # define SCOP_MAT4_HPP
 
-#include "Vec3.hpp"
+# include <Vec3.hpp>
+# include <stdexcept>
 
 class Mat4
 {

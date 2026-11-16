@@ -1,7 +1,4 @@
-#include "Mat4.hpp"
-
-#include <cmath>
-#include <stdexcept>
+#include <Mat4.hpp>
 
 namespace
 {

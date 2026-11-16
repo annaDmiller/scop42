@@ -1,4 +1,4 @@
-#include "Vec3.hpp"
+#include <Vec3.hpp>
 
 Vec3::Vec3() : x(0.0f), y(0.0f), z(0.0f)
 { }
@@ -113,6 +113,24 @@ float Vec3::getZ() const
 {
     return z;
 }
+
+/*void Vec3::setX(float value)
+{
+    this->x = value;
+    return ;
+}
+
+void Vec3::setY(float value)
+{
+    this->y = value;
+    return ;
+}
+
+void Vec3::setZ(float value)
+{
+    this->z = value;
+    return ;
+}*/
 
 float Vec3::dot(const Vec3& a, const Vec3& b)
 {
