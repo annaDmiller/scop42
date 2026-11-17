@@ -2,26 +2,21 @@
 # define SCOP_MODEL_HPP
 
 # include <vector>
+# include <map>
 # include <Vec3.hpp>
 # include <Vec2.hpp>
-# include <sstream>
-# include <string>
+# include <Material.hpp>
 # include <fstream>
+# include <sstream>
+# include <cstdlib>
+# include <cerrno>
+# include <climits>
+# include <cmath>
+# include <algorithm>
+# include <limits>
+# include <string>
 # include <iostream>
-# include <map>
-
-struct ObjIndex
-{
-    int vertex;
-    int texCoord;
-    int normal;
-};
-
-struct ObjFace
-{
-    std::vector<ObjIndex> vertices;
-    std::string matName;
-};
+# include <cstddef>
 
 struct Vertex
 {
@@ -31,27 +26,24 @@ struct Vertex
     Vec3 Color;
 };
 
-struct Material
+struct SubMesh
 {
-    std::string name;
-
-    Vec3 ambient;
-    Vec3 diffuse;
-    Vec3 specular;
-
-    float shininess;
-    float opacity;
-
-    std::string diffuseMap;
+    unsigned int firstVertex;
+    unsigned int vertexCount;
+    unsigned int materialIndex;
 };
 
-struct ObjData
+struct FaceVertex
 {
-    std::vector<Vec3> positions;
-    std::vector<Vec2> texCoords;
-    std::vector<Vec3> normals;
+    int positionIndex;
+    int texCoordIndex;
+    int normalIndex;
+};
 
-    std::vector<ObjFace> faces;
+struct Face
+{
+    std::vector<FaceVertex> vertices;
+    std::string matName;
 };
 
 class Model
@@ -60,29 +52,69 @@ class Model
         std::vector<Vec3> _positions;
         std::vector<Vec2> _texCoords;
         std::vector<Vec3> _normals;
+        std::vector<Face> _faces;
         std::vector<std::string> _matLibs;
 
-        std::vector<Vertex> _vertices;
-        std::vector<unsigned int> _indices;
         std::vector<Material> _materials;
+        std::map<std::string, unsigned int> _materialLookup;
+
+        std::vector<Vertex> _vertices;
+        std::vector<SubMesh> _subMeshes;
 
         std::string _pathToFile;
         std::string _objectName;
+        std::string _error;
+        std::string _currMat;
 
-        static bool parseVertex(std::stringstream& ss, Model* model, std::string& err_str);
-        static bool parseTexCoord(std::stringstream& ss, Model* model, std::string& err_str);
-        static bool parseNormal(std::stringstream& ss, Model* model, std::string& err_str);
-        static bool parseFace(std::stringstream& ss, Model* model, std::string& err_str);
-        static bool parseObjectName(std::stringstream& ss, Model* model, std::string& err_str);
+        unsigned int _vao;
+        unsigned int _vbo;
+        bool _uploaded;
+        bool _loaded;
+
+        void setError(const std::string& msg, unsigned int lineNumber = 0);
+
+        bool parseOBJ(const std::string& filename);
+        bool parseVertex(std::stringstream& ss, unsigned int lineNumber);
+        bool parseTexCoord(std::stringstream& ss, unsigned int lineNumber);
+        bool parseNormal(std::stringstream& ss, unsigned int lineNumber);
+        bool parseObjectName(std::stringstream& ss, unsigned int lineNumber);
+        bool parseMtlLib(std::stringstream& ss, unsigned int lineNumber);
+        bool parseUseMtl(std::stringstream& ss, unsigned int lineNumber);
+        bool parseFace(std::stringstream& ss, unsigned int lineNumber);
+        bool parseFaceVertex(const std::string& token, FaceVertex& result,
+                            unsigned int lineNumber);
+
+
+        unsigned int addMaterial(const Material& material);
+
 
     public:
         Model();
+        explicit Model(const std::string& pathToFile);
         ~Model();
 
-        static Model* loadOBJ(const std::string& pathToFile);
-        void setupModel();
+        bool load(const std::string& filename);
+
+        //static Model* loadOBJ(const std::string& pathToFile);
+        bool uploadToGPU();
+        void releaseGPU();
+
+        void draw() const;
+        void drawSubMesh(unsigned int SubMeshIndex) const;
+
+        bool isLoaded() const;
+        bool isUploaded() const;
+        
+        const std::vector<Vertex> &getVertices() const;
+        const std::vector<Material> &getMaterials() const;
+        const std::vector<SubMesh> &getSubMeshes() const;
+        const std::string &getError() const;
+
+        void clearCPUData();
 };
 
+bool isValidVector(Vec3 vec);
+bool isValidVector(Vec2 vec);
 bool isFinite(float value);
 
 #endif
