@@ -23,3 +23,8 @@ float Vec2::getY() const
 {
     return y;
 }
+
+bool Vec2::isValidVector() const
+{
+    return (isFinite(x) && isFinite(y));
+}

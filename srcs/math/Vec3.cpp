@@ -146,3 +146,8 @@ Vec3 operator*(float scalar, const Vec3& vector)
 {
     return vector * scalar;
 }
+
+bool Vec3::isValidVector() const
+{
+    return (isFinite(x) && isFinite(y) && isFinite(z));
+}

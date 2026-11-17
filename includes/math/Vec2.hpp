@@ -2,6 +2,7 @@
 # define SCOP_VEC2_HPP
 
 # include <cmath>
+# include <math_utils.hpp>
 
 class Vec2
 {
@@ -17,6 +18,8 @@ class Vec2
     
         float getX() const;
         float getY() const;
+
+        bool isValidVector() const;
 };
 
 

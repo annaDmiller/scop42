@@ -2,6 +2,7 @@
 # define SCOP_VEC3_HPP
 
 # include <cmath>
+# include <math_utils.hpp>
 
 class Vec3
 {
@@ -44,6 +45,8 @@ class Vec3
         
         static float dot(const Vec3& a, const Vec3& b);
         static Vec3 cross(const Vec3& a, const Vec3& b);
+
+        bool isValidVector() const;
 };
 
 Vec3 operator*(float scalar, const Vec3& vector);
