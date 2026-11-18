@@ -84,6 +84,8 @@ class Model
         bool parseFaceVertex(const std::string& token, FaceVertex& result,
                             unsigned int lineNumber);
 
+        static bool stringToInteger(const std::string& text, int& value);
+        static bool resolveOBJIndex(int objIndex, std::size_t count, int& result);
 
         unsigned int addMaterial(const Material& material);
 

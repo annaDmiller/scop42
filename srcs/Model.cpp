@@ -272,9 +272,81 @@ bool Model::Model::parseFaceVertex(const std::string& token, FaceVertex& result,
         return false;
     }
 
-    
+    int rawIndex;
+    if (!stringToInteger(parts[0], rawIndex) ||
+        !resolveOBJIndex(rawIndex, _positions.size(), result.positionIndex))
+    {
+        setError("Invalid or out-of-range position index in face.", lineNumber);
+        return false;
+    }
+
+    result.texCoordIndex = -1;
+    result.normalIndex = -1;
+
+    if (partCount >= 2 && !parts[1].empty())
+    {
+        if (!stringToInteger(parts[1], rawIndex) ||
+            !resolveOBJIndex(rawIndex,_texCoords.size(), result.texCoordIndex))
+        {
+            setError("Invalid or out-of-range texture index in face.", lineNumber);
+            return false;
+        }
+    }
+
+    if (partCount == 3 && !parts[2].empty())
+    {
+        if (!stringToInteger(parts[2], rawIndex) ||
+            !resolveOBJIndex(rawIndex, _normals.size(), result.normalIndex))
+        {
+            setError("Invalid or out-of-range normal index in face.", lineNumber);
+            return false;
+        }
+    }
+
+    if ((partCount == 2 && parts[1].empty()) ||
+        (partCount == 3 && parts[2].empty() && parts[1].empty()))
+    {
+        setError("Malformed face vertex index.", lineNumber);
+        return false;
+    }
+
+    return true;
 }
 
+bool Model::stringToInteger(const std::string& text, int& value)
+{
+    if (text.empty())
+        return false;
+
+    char* end = NULL;
+    errno = 0;
+    long parsed = std::strtol(text.c_str(), &end, 10);
+
+    if (errno != 0 || end == text.c_str() || *end != '\0' ||
+        parsed < INT_MIN || parsed > INT_MAX || parsed == 0)
+        return false;
+
+    value = static_cast<int>(parsed);
+    return true;
+}
+
+bool Model::resolveOBJIndex(int objIndex, std::size_t count, int& result)
+{
+    if (objIndex == 0 || count > static_cast<std::size_t>(INT_MAX))
+        return false;
+
+    long resolved;
+    if (objIndex > 0)
+        resolved = static_cast<long>(objIndex) + 1;
+    else
+        resolved = static_cast<long>(count) + objIndex;
+
+    if (resolved < 0 || resolved >= static_cast<long>(count))
+        return false;
+
+    result = static_cast<int>(resolved);
+    return true;
+}
 
 bool isValidVector(Vec3 vec)
 {
