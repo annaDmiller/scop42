@@ -19,6 +19,7 @@ class Material
         Material();
         ~Material();
 
+        void setName(const std::string& matName);
 };
 
 #endif

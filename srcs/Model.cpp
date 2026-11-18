@@ -53,9 +53,17 @@ bool Model::load(const std::string& filename)
     clearCPUData();
 
     _pathToFile = filename;
+    _objDirectory = directoryOf(filename);
 
     if (!parseOBJ(filename))
         return false;
+
+    for (std::size_t ind = 0; ind < _matLibs.size(); ind++)
+    {
+        const std::string mtlPath = joinPath(_objDirectory, _matLibs[ind]);
+        if (!parseMTL(mtlPath))
+            return false
+    }
 }
 
 typedef bool (Model::*ParserFunction)(std::stringstream&, unsigned int);
@@ -246,7 +254,7 @@ bool Model::parseFace(std::stringstream& ss, unsigned int lineNumber)
     return true;
 }
 
-bool Model::Model::parseFaceVertex(const std::string& token, FaceVertex& result, unsigned int lineNumber)
+bool Model::parseFaceVertex(const std::string& token, FaceVertex& result, unsigned int lineNumber)
 {
     std::string parts[3];
     unsigned int partCount = 0;
@@ -311,6 +319,95 @@ bool Model::Model::parseFaceVertex(const std::string& token, FaceVertex& result,
     }
 
     return true;
+}
+
+bool Model::parseMTL(const std::string& libPath)
+{
+    _currMat = directoryOf(libPath);
+    std::ifstream file(libPath.c_str());
+    if (!file.is_open())
+    {
+        setError("Could not open material library: " + libPath);
+        return false;
+    }
+
+    std::string line;
+    unsigned int lineNumber = 0;
+    int currMat = -1;
+
+    while (std::getline(file, line))
+    {
+        ++lineNumber;
+        remove_if(line.begin(), line.end(), isspace);
+        if (line.empty() || line[0] == '#')
+            continue ;
+
+        std::stringstream stream;
+        std::string directive;
+        stream >> directive;
+        if (directive == "newmtl")
+        {
+            std::string matName;
+            if (!(stream >> matName))
+            {
+                setError("newmtl directive is missing a material name in " + libPath + ".", lineNumber);
+                return false;
+            }
+
+            Material newMat;
+            newMat.setName(matName);
+            currMat = static_cast<int>(addMaterial(newMat));
+        }
+        else if (currMat >= 0)
+        {
+            if (!parseMTLProperty(directive, stream, _materials[currMat], lineNumber))
+                return false;
+        }
+    }
+
+    if (file.bad())
+    {
+        setError("I/O error while reading material library: " + libPath);
+        return false;
+    }
+
+    return true;
+}
+
+bool Model::parseMTLProperty(const std::string& type, const std::stringstream& stream,
+                            Material& material, int lineNumber)
+{
+    
+}
+
+std::string Model::directoryOf(const std::string& filename)
+{
+    const std::string::size_type pos = filename.find_last_of("/\\");
+    if (pos == std::string::npos)
+        return ".";
+
+    if (pos == 0)
+        return filename.substr(0, 1);
+
+    return filename.substr(0, pos);
+}
+
+std::string Model::joinPath(const std::string& directory, const std::string& filename)
+{
+    if (filename.empty())
+        return directory;
+
+    if (filename[0] == '/' || filename[0] == '\\' ||
+        (filename.size() > 1 && filename[1] == ':'))
+        return filename;
+
+    if (directory.empty() || directory == ".")
+        return filename;
+
+    const char lastC = directory[directory.size() - 1];
+    if (lastC == '/' || lastC == '\\')
+        return directory + filename;
+    return directory + "/" + filename;
 }
 
 bool Model::stringToInteger(const std::string& text, int& value)

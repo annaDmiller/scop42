@@ -62,6 +62,7 @@ class Model
         std::vector<SubMesh> _subMeshes;
 
         std::string _pathToFile;
+        std::string _objDirectory;
         std::string _objectName;
         std::string _error;
         std::string _currMat;
@@ -83,7 +84,12 @@ class Model
         bool parseFace(std::stringstream& ss, unsigned int lineNumber);
         bool parseFaceVertex(const std::string& token, FaceVertex& result,
                             unsigned int lineNumber);
+        bool parseMTL(const std::string& libPath);
+        bool parseMTLProperty(const std::string& type, const std::stringstream& stream,
+                                Material& material, int lineNumber);
 
+        static std::string directoryOf(const std::string& filename);
+        static std::string joinPath(const std::string& directory, const std::string& filename);
         static bool stringToInteger(const std::string& text, int& value);
         static bool resolveOBJIndex(int objIndex, std::size_t count, int& result);
 
