@@ -85,8 +85,6 @@ class Model
         bool parseFaceVertex(const std::string& token, FaceVertex& result,
                             unsigned int lineNumber);
         bool parseMTL(const std::string& libPath);
-        bool parseMTLProperty(const std::string& type, const std::stringstream& stream,
-                                Material& material, int lineNumber);
 
         static std::string directoryOf(const std::string& filename);
         static std::string joinPath(const std::string& directory, const std::string& filename);

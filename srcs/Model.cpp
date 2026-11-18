@@ -62,7 +62,7 @@ bool Model::load(const std::string& filename)
     {
         const std::string mtlPath = joinPath(_objDirectory, _matLibs[ind]);
         if (!parseMTL(mtlPath))
-            return false
+            return false;
     }
 }
 
@@ -360,8 +360,12 @@ bool Model::parseMTL(const std::string& libPath)
         }
         else if (currMat >= 0)
         {
-            if (!parseMTLProperty(directive, stream, _materials[currMat], lineNumber))
+            std::string errMsg = "";
+            if (!_materials[currMat].parseMTLProperty(directive, stream, errMsg))
+            {
+                setError(errMsg, lineNumber);
                 return false;
+            }
         }
     }
 
@@ -372,12 +376,6 @@ bool Model::parseMTL(const std::string& libPath)
     }
 
     return true;
-}
-
-bool Model::parseMTLProperty(const std::string& type, const std::stringstream& stream,
-                            Material& material, int lineNumber)
-{
-    
 }
 
 std::string Model::directoryOf(const std::string& filename)
