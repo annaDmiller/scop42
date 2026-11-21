@@ -114,6 +114,29 @@ float Vec3::getZ() const
     return z;
 }
 
+void Vec3::compareAndSetMin(const Vec3& cmp)
+{
+    this->x = std::min(this->x, cmp.x);
+    this->y = std::min(this->y, cmp.y);
+    this->z = std::min(this->z, cmp.z);
+}
+
+void Vec3::compareAndSetMax(const Vec3& cmp)
+{
+    this->x = std::max(this->x, cmp.x);
+    this->y = std::max(this->y, cmp.y);
+    this->z = std::max(this->z, cmp.z);
+}
+
+Vec3 Vec3::calculateAvVec(const Vec3& fst, const Vec3& snd)
+{
+    Vec3(
+        (fst.x + snd.x) * 0.5f,
+        (fst.y + snd.y) * 0.5f,
+        (fst.z + snd.z) * 0.5f
+    );
+}
+
 /*void Vec3::setX(float value)
 {
     this->x = value;

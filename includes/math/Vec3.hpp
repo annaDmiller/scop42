@@ -39,6 +39,10 @@ class Vec3
         float getY() const;
         float getZ() const;
 
+        void compareAndSetMax(const Vec3& cmp);
+        void compareAndSetMin(const Vec3& cmp);
+        static Vec3 calculateAvVec(const Vec3& fst, const Vec3& snd);
+
         //void setX(float value);
         //void setY(float value);
         //void setZ(float value);

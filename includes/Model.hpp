@@ -72,6 +72,10 @@ class Model
         bool _uploaded;
         bool _loaded;
 
+        Vec3 _boundsMin;
+        Vec3 _boundsMax;
+        Vec3 _center;
+
         void setError(const std::string& msg, unsigned int lineNumber = 0);
 
         bool parseOBJ(const std::string& filename);
@@ -93,6 +97,9 @@ class Model
 
         bool validate() const;
         bool validateFace(const Face& face, unsigned int faceNumber) const;
+
+        bool calculateBounds();
+        void centerAndNormalize();
 
         unsigned int addMaterial(const Material& material);
 

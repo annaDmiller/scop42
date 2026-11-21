@@ -1,14 +1,16 @@
 #include <Model.hpp>
 
 Model::Model()
-    : _vao(0), _vbo(0), _loaded(false), _uploaded(false)
+    : _boundsMin(), _boundsMax(),
+    _vao(0), _vbo(0), _loaded(false), _uploaded(false)
 {
     Material defaultMaterial;
     addMaterial(defaultMaterial);
 }
 
 Model::Model(const std::string& pathToFile)
-    : _vao(0), _vbo(0), _loaded(false), _uploaded(false),
+    : _boundsMin(), _boundsMax(),
+    _vao(0), _vbo(0), _loaded(false), _uploaded(false),
     _pathToFile(pathToFile)
 {
     Material defaultMaterial;
@@ -68,7 +70,10 @@ bool Model::load(const std::string& filename)
     if (!validate())
         return false;
 
-    
+    if (!calculateBounds())
+        return false;
+
+    centerAndNormalize();
 }
 
 typedef bool (Model::*ParserFunction)(std::stringstream&, unsigned int);
@@ -510,6 +515,28 @@ bool Model::validateFace(const Face& face, unsigned int faceNumber) const
         }
     }
 
+    return true;
+}
+
+bool Model::calculateBounds()
+{
+    if (_positions.empty())
+    {
+        setError("Cannot calculate bounds: no positions.");
+        return false;
+    }
+
+    _boundsMin = _positions[0];
+    _boundsMax = _positions[0];
+
+    for (std::size_t ind = 1; ind < _positions.size(); ind++)
+    {
+        const Vec3& p = _positions[ind];
+        _boundsMin.compareAndSetMin(p);
+        _boundsMax.compareAndSetMax(p);
+    }
+
+    _center = Vec3::calculateAvVec(_boundsMin, _boundsMax);
     return true;
 }
 
