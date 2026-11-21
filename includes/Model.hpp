@@ -100,8 +100,12 @@ class Model
 
         bool calculateBounds();
         void centerAndNormalize();
-        bool buildRenderData();
 
+        bool appendFaceTriangles(const Face& face, unsigned int faceNumber);
+        bool appendTriangle(const FaceVertex& a, const FaceVertex& b, const FaceVertex& c,
+                            unsigned int indexMaterial, unsigned int faceNumber);
+
+        unsigned int findMaterial(const std::string &name) const;
         unsigned int addMaterial(const Material& material);
 
 
@@ -128,6 +132,7 @@ class Model
         const std::string &getError() const;
 
         void clearCPUData();
+        bool buildRenderData();
 };
 
 bool isValidVector(Vec3 vec);

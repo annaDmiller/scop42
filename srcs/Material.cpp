@@ -5,10 +5,10 @@ bool Material::parseMTLProperty(const std::string& type, std::stringstream& stre
 {
     std::map<std::string, int> types = {
         {"Ka", 0}, // Ka - ambien coefficients' vector
-        {"Kd", 1}, // Kd - diffuse coefficients' vector
-        {"Ks", 2}, // Ks - specular coefficients' vector
-        {"Ns", 3}, // Ns - shininess value
-        {"d", 4}, // d - opacity value
+        {"Kd", 1}, // Kd - _diffuse coefficients' vector
+        {"Ks", 2}, // Ks - _specular coefficients' vector
+        {"Ns", 3}, // Ns - _shininess value
+        {"d", 4}, // d - _opacity value
         {"Tr", 5} // Tr - transparency value
     };
 
@@ -18,44 +18,44 @@ bool Material::parseMTLProperty(const std::string& type, std::stringstream& stre
         switch (it->second)
         {
         case 0:
-            if (!checkVector(stream, this->ambient))
+            if (!checkVector(stream, this->_ambient))
             {
-                errMsg = "Invalid data for ambient vector.";
+                errMsg = "Invalid data for _ambient vector.";
                 return false;
             }
             break;
 
         case 1:
-            if (!checkVector(stream, this->diffuse))
+            if (!checkVector(stream, this->_diffuse))
             {
-                errMsg = "Invalid data for diffuse vector.";
+                errMsg = "Invalid data for _diffuse vector.";
                 return false;
             }
             break;
             
         case 2:
-            if (!checkVector(stream, this->specular))
+            if (!checkVector(stream, this->_specular))
             {
-                errMsg = "Invalid data for specular vector.";
+                errMsg = "Invalid data for _specular vector.";
                 return false;
             }
             break;
 
         case 3:
-            if (!(stream >> this->shininess) ||
-                !isFinite(this->shininess) || this->shininess < 0.0f)
+            if (!(stream >> this->_shininess) ||
+                !isFinite(this->_shininess) || this->_shininess < 0.0f)
             {
-                errMsg = "Invalid shininess value.";
+                errMsg = "Invalid _shininess value.";
                 return false;
             }
             break;
 
         case 4:
-            if (!(stream >> this->opacity) || 
-                !isFinite(this->opacity) || this->opacity < 0.0f ||
-                this->opacity > 1.0f)
+            if (!(stream >> this->_opacity) || 
+                !isFinite(this->_opacity) || this->_opacity < 0.0f ||
+                this->_opacity > 1.0f)
             {
-                errMsg = "Invalid opacity value.";
+                errMsg = "Invalid _opacity value.";
                 return false;
             }
             break;
@@ -68,7 +68,7 @@ bool Material::parseMTLProperty(const std::string& type, std::stringstream& stre
                 errMsg = "Invalid transparency value.";
                 return false;
             }
-            this->opacity = 1.0f - trans;
+            this->_opacity = 1.0f - trans;
             break;
             
         default:
@@ -89,4 +89,9 @@ bool Material::checkVector(std::stringstream& ss, Vec3& result)
     
     result = check;
     return true;
+}
+
+const std::string& Material::getName() const
+{
+    return _name;
 }

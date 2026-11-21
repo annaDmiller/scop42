@@ -75,9 +75,6 @@ bool Model::load(const std::string& filename)
 
     centerAndNormalize();
 
-    if (!buildRenderData())
-        return false;
-
     if (_vertices.empty())
     {
         setError("The OBJ file does not contain renderable triangles.");
@@ -576,7 +573,47 @@ void Model::centerAndNormalize()
 
 bool Model::buildRenderData()
 {
+    _vertices.clear();
+    _subMeshes.clear();
 
+    for (std::size_t ind = 0; ind < _faces.size(); ind++)
+    {
+        if (!appendFaceTriangles(_faces[ind], static_cast<unsigned int>(ind + 1)))
+            return false;
+    }
+
+    return true;
+}
+
+unsigned int Model::findMaterial(const std::string& name) const
+{
+    if (name.empty())
+        return 0;
+
+    std::map<std::string, unsigned int>::const_iterator it =
+        _materialLookup.find(name);
+
+    if (it == _materialLookup.end())
+        return 0;
+    
+    return it->second;
+}
+
+unsigned int Model::addMaterial(const Material& material)
+{
+    std::map<std::string, unsigned int>::iterator existing =
+        _materialLookup.find(material.getName());
+
+    if (existing != _materialLookup.end())
+    {
+        _materials[existing->second] = material;
+        return existing->second;
+    }
+
+    const unsigned int index = static_cast<unsigned int>(_materials.size());
+    _materials.push_back(material);
+    _materialLookup[material.getName()] = index;
+    return index;
 }
 
 bool isValidVector(Vec3 vec)

@@ -9,12 +9,12 @@
 class Material
 {
     private:
-        std::string name;
-        Vec3 ambient;
-        Vec3 diffuse;
-        Vec3 specular;
-        float shininess;
-        float opacity;
+        std::string _name;
+        Vec3 _ambient;
+        Vec3 _diffuse;
+        Vec3 _specular;
+        float _shininess;
+        float _opacity;
 
         static bool checkVector(std::stringstream& ss, Vec3& result);
 
@@ -31,6 +31,8 @@ class Material
         void setSpecular(const Vec3& srcVec);
         void setShininess(const float& value);
         void setOpacity(const float& value);
+
+        const std::string& getName() const;
 };
 
 #endif

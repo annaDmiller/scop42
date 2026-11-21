@@ -12,11 +12,25 @@ int main(int argc, char** argv)
         return 1;
     
     t_all all;
-    all.objModel = Model::loadOBJ(argv[1]);
+    all.objModel = new Model();
     if (!all.objModel)
+    {
+        std::cerr << "ERROR: impossible to create Model instance. Please, try again later." << std::endl;
         return 1;
+    }
 
-    all.objModel->setupModel();
+    if (!all.objModel->load(std::string(argv[1])))
+    {
+        delete all.objModel;
+        return 1;
+    }
+
+    if (!all.objModel->buildRenderData())
+    {
+        delete all.objModel;
+        return 1;
+    }
+    
     all.window = NULL;
     if (initWindow(all.window) == -1)
         return 1;
