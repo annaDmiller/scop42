@@ -64,6 +64,11 @@ bool Model::load(const std::string& filename)
         if (!parseMTL(mtlPath))
             return false;
     }
+
+    if (!validate())
+        return false;
+
+    
 }
 
 typedef bool (Model::*ParserFunction)(std::stringstream&, unsigned int);
@@ -432,7 +437,7 @@ bool Model::resolveOBJIndex(int objIndex, std::size_t count, int& result)
 
     long resolved;
     if (objIndex > 0)
-        resolved = static_cast<long>(objIndex) + 1;
+        resolved = static_cast<long>(objIndex) - 1;
     else
         resolved = static_cast<long>(count) + objIndex;
 
@@ -440,6 +445,71 @@ bool Model::resolveOBJIndex(int objIndex, std::size_t count, int& result)
         return false;
 
     result = static_cast<int>(resolved);
+    return true;
+}
+
+bool Model::validate() const
+{
+    if (_positions.empty())
+    {
+        const_cast<Model *>(this)->setError("OBJ file contains no valid vertex positions.");
+        return false;
+    }
+
+    if (_faces.empty())
+    {
+        const_cast<Model *>(this)->setError("OBJ file contaians no faces information.");
+        return false;
+    }
+
+    for (size_t ind = 0; ind < _faces.size(); ind++)
+    {
+        if (!validateFace(_faces[ind], static_cast<unsigned int>(ind + 1)))
+            return false;
+    }
+
+    return true;
+}
+
+bool Model::validateFace(const Face& face, unsigned int faceNumber) const
+{
+    if (face.vertices.size() < 3)
+    {
+        const_cast<Model*>(this)->setError("Face can't have less than 3 vertices in 3D model.");
+        return false;
+    }
+
+    for (std::size_t ind = 0; ind < face.vertices.size(); ind++)
+    {
+        const FaceVertex& v = face.vertices[ind];
+        std::string faceNumberStr = numberToString(faceNumber);
+        if (v.positionIndex < 0 || 
+            static_cast<std::size_t>(v.positionIndex) >= _positions.size())
+        {
+            const_cast<Model*>(this)->setError(
+                "Face " + faceNumberStr + " has an invalid position index.");
+            return false;
+        }
+
+        if (v.texCoordIndex != -1 &&
+            (v.texCoordIndex < 0 ||
+            static_cast<std::size_t>(v.texCoordIndex) >= _texCoords.size()))
+        {
+            const_cast<Model*>(this)->setError(
+                "Face " + faceNumberStr + " has an invalid texture coordinate index.");
+            return false;
+        }
+
+        if (v.normalIndex != -1 &&
+            (v.normalIndex < 0 || 
+            static_cast<std::size_t>(v.normalIndex) >= _normals.size()))
+        {
+            const_cast<Model*>(this)->setError(
+                "Face " + faceNumberStr + " has an invalid normal index.");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -451,4 +521,11 @@ bool isValidVector(Vec3 vec)
 bool isValidVector(Vec2 vec)
 {
     return (vec.isValidVector());
+}
+
+std::string numberToString(unsigned int value)
+{
+    std::ostringstream out;
+    out << value;
+    return out.str();
 }

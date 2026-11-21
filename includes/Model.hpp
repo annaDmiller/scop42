@@ -91,6 +91,9 @@ class Model
         static bool stringToInteger(const std::string& text, int& value);
         static bool resolveOBJIndex(int objIndex, std::size_t count, int& result);
 
+        bool validate() const;
+        bool validateFace(const Face& face, unsigned int faceNumber) const;
+
         unsigned int addMaterial(const Material& material);
 
 
@@ -122,5 +125,7 @@ class Model
 bool isValidVector(Vec3 vec);
 bool isValidVector(Vec2 vec);
 bool isFinite(float value);
+
+std::string numberToString(unsigned int value);
 
 #endif

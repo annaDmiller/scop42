@@ -4,6 +4,7 @@
 # include <Vec3.hpp>
 # include <string>
 # include <map>
+# include <sstream>
 
 class Material
 {
@@ -14,15 +15,14 @@ class Material
         Vec3 specular;
         float shininess;
         float opacity;
-        std::string diffuseMap;
 
-        bool checkVector(Vec3& vector);
+        static bool checkVector(std::stringstream& ss, Vec3& result);
 
     public:
         Material();
         ~Material();
 
-        bool parseMTLProperty(const std::string& type, const std::stringstream& stream,
+        bool parseMTLProperty(const std::string& type, std::stringstream& stream,
                              std::string& errMsg);
 
         void setName(const std::string& matName);
@@ -31,7 +31,6 @@ class Material
         void setSpecular(const Vec3& srcVec);
         void setShininess(const float& value);
         void setOpacity(const float& value);
-        void setDiffMap(const std::string& name);
 };
 
 #endif
