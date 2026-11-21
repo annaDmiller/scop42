@@ -74,6 +74,18 @@ bool Model::load(const std::string& filename)
         return false;
 
     centerAndNormalize();
+
+    if (!buildRenderData())
+        return false;
+
+    if (_vertices.empty())
+    {
+        setError("The OBJ file does not contain renderable triangles.");
+        return false;
+    }
+
+    _loaded = true;
+    return true;
 }
 
 typedef bool (Model::*ParserFunction)(std::stringstream&, unsigned int);
@@ -538,6 +550,33 @@ bool Model::calculateBounds()
 
     _center = Vec3::calculateAvVec(_boundsMin, _boundsMax);
     return true;
+}
+
+void Model::centerAndNormalize()
+{
+    Vec3 diff = _boundsMax - _boundsMin;
+    const float dx = diff.getX();
+    const float dy = diff.getY();
+    const float dz = diff.getZ();
+    const float maxDimension = std::max(dx, std::max(dy, dz));
+
+    if (maxDimension <= 1.0e-8f)
+        return;
+
+    const float scale = 2.0f / maxDimension;
+    for (std::size_t ind = 0; ind < _positions.size(); ind++)
+        _positions[ind] = (_positions[ind] - _center) * scale;
+
+    _boundsMin =   Vec3(dx == 0.0f ? 0.0f : -dx * 0.5f * scale,
+                        dy == 0.0f ? 0.0f : -dy * 0.5f * scale,
+                        dz == 0.0f ? 0.0f : -dz * 0.5f * scale);
+    _boundsMax = Vec3() -_boundsMin;
+    _center = Vec3();
+}
+
+bool Model::buildRenderData()
+{
+
 }
 
 bool isValidVector(Vec3 vec)

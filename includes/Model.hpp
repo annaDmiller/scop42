@@ -100,6 +100,7 @@ class Model
 
         bool calculateBounds();
         void centerAndNormalize();
+        bool buildRenderData();
 
         unsigned int addMaterial(const Material& material);
 
