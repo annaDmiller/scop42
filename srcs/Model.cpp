@@ -585,6 +585,75 @@ bool Model::buildRenderData()
     return true;
 }
 
+bool Model::appendFaceTriangles(const Face& face, unsigned int faceNumber)
+{
+    const unsigned int materialIndex = findMaterial(face.matName);
+    if (materialIndex == 0 && !face.matName.empty())
+    {
+        //Using the default material
+        //Create default material and add it to the material
+        std::cerr << "The material for the face " + numberToString(faceNumber) + " not found. Using the default material: " << std::endl;
+    }
+
+    for (std::size_t ind = 1; ind + 1 < face.vertices.size(); ind++)
+    {
+        if (!appendTriangle(face.vertices[0], face.vertices[ind], face.vertices[ind + 1],
+                materialIndex, faceNumber))
+            return false;
+    }
+
+    return true;
+}
+
+bool Model::appendTriangle(const FaceVertex& a, const FaceVertex& b, const FaceVertex& c,
+    unsigned int materialIndex, unsigned int faceNumber)
+{
+    const Vec3& pa = _positions[a.positionIndex];
+    const Vec3& pb = _positions[b.positionIndex];
+    const Vec3& pc = _positions[c.positionIndex];
+
+    const Vec3 generatedNormal = faceNormal(pa, pb, pc);
+    if (generatedNormal.length() <= 1.0e-8f)
+    {
+        setError("Degenerate triangle in face " + numberToString(faceNumber) + ".");
+        return false;
+    }
+
+    const Material& material = _materials[materialIndex];
+    // Submeshes are conriguous runs of faces using the same material
+    if (_subMeshes.empty() || _subMeshes.back().materialIndex != materialIndex)
+    {
+        SubMesh subMesh;
+        subMesh.firstVertex = static_cast<unsigned int>(_vertices.size());
+        subMesh.vertexCount = 0;
+        subMesh.materialIndex = materialIndex;
+        _subMeshes.push_back(subMesh);
+    }
+
+    const FaceVertex faceVertices[3] = { a, b, c };
+    for (int ind = 0; ind < 3; ind++)
+    {
+        const FaceVertex &src = faceVertices[ind];
+        Vertex vertex;
+
+        vertex.position = _positions[src.positionIndex];
+        if (src.normalIndex >= 0)
+            vertex.normal = _normals[src.normalIndex].normalized();
+        else
+            vertex.normal = generatedNormal;
+
+        if (src.texCoordIndex >= 0)
+            vertex.texCoord = _texCoords[src.texCoordIndex];
+        else
+            vertex.texCoord = Vec2();
+
+        vertex.color = material.getDiffuse();
+        _subMeshes.back().vertexCount++;
+    }
+
+    return true;
+}
+
 unsigned int Model::findMaterial(const std::string& name) const
 {
     if (name.empty())
@@ -614,6 +683,11 @@ unsigned int Model::addMaterial(const Material& material)
     _materials.push_back(material);
     _materialLookup[material.getName()] = index;
     return index;
+}
+
+Vec3 Model::faceNormal(const Vec3& a, const Vec3& b, const Vec3& c)
+{
+    return Vec3::cross((b - a), (c - a)).normalized();
 }
 
 bool isValidVector(Vec3 vec)

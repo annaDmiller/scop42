@@ -95,3 +95,8 @@ const std::string& Material::getName() const
 {
     return _name;
 }
+
+const Vec3& Material::getDiffuse() const
+{
+    return _diffuse;
+}

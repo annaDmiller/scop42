@@ -33,6 +33,7 @@ class Material
         void setOpacity(const float& value);
 
         const std::string& getName() const;
+        const Vec3& getDiffuse() const;
 };
 
 #endif

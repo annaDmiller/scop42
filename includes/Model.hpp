@@ -23,7 +23,7 @@ struct Vertex
     Vec3 position;
     Vec3 normal;
     Vec2 texCoord;
-    Vec3 Color;
+    Vec3 color;
 };
 
 struct SubMesh
@@ -104,6 +104,8 @@ class Model
         bool appendFaceTriangles(const Face& face, unsigned int faceNumber);
         bool appendTriangle(const FaceVertex& a, const FaceVertex& b, const FaceVertex& c,
                             unsigned int indexMaterial, unsigned int faceNumber);
+
+        static Vec3 faceNormal(const Vec3& a, const Vec3& b, const Vec3& c);
 
         unsigned int findMaterial(const std::string &name) const;
         unsigned int addMaterial(const Material& material);
