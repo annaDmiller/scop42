@@ -132,6 +132,7 @@ class Model
         const std::vector<Material> &getMaterials() const;
         const std::vector<SubMesh> &getSubMeshes() const;
         const std::string &getError() const;
+        const std::string &getObjName() const;
 
         void clearCPUData();
         bool buildRenderData();

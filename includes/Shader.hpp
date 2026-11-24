@@ -10,13 +10,14 @@
 class Shader
 {
     private:
-        unsigned int id;
+        GLuint _id;
 
     public:
-        Shader(const char* vertexPath, const char* fragmentPath);
+        Shader(const char* vertexPath, const char* fragmentPath, bool& isSucc);
         ~Shader();
 
         void use();
+        const GLuint& getID() const;
 };
 
 #endif

@@ -19,7 +19,10 @@ Model::Model(const std::string& pathToFile)
 }
 
 Model::~Model()
-{   }
+{
+    // clear all the rendering data
+    clearCPUData();
+}
 
 void Model::clearCPUData()
 {

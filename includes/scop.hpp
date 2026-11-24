@@ -19,11 +19,15 @@
 # include <Texture.hpp>
 # include <Shader.hpp>
 # include <Model.hpp>
+# include <Window.hpp>
 
 namespace fs = std::filesystem;
 
 const int HEIGHT = 800;
 const int WIDTH = 1000;
+
+const char* VERTEX_SHADER = "./shaders/vertexShader.c";
+const char* FRAGMENT_SHADER =  "./shaders/fragmentShader.c";
 
 class Model;
 class Texture;
@@ -34,12 +38,11 @@ class Vec3;
 typedef struct  s_all
 {
     Model*      objModel;
-    GLFWwindow* window;
+    Window*     window;
     Texture*    texture;
     Shader*     prog;
 }               t_all;
 
-int initWindow(GLFWwindow*& window);
 bool validateOBJFile(const char* filename);
 
 #endif
