@@ -17,21 +17,39 @@
 # include <string>
 # include <iostream>
 # include <cstddef>
+# include <glad/gl.h>
+# include <type_traits>
 
 struct Vertex
 {
     Vec3 position;
     Vec3 normal;
     Vec2 texCoord;
-    Vec3 color;
+
+    Vec3 ambient;
+    Vec3 diffuse;
+    Vec3 specular;
+
+    float shininess;
 };
 
-struct SubMesh
-{
-    unsigned int firstVertex;
-    unsigned int vertexCount;
-    unsigned int materialIndex;
-};
+static_assert(std::is_standard_layout_v<Vec3>,
+    "Vec3 class must have a standard layout to be compatible with Vertex attributes.");
+
+static_assert(std::is_standard_layout_v<Vec2>,
+    "Vec2 class must have a standard layout to be compatible with Vertex attributes.");
+
+static_assert(sizeof(float) == 4,
+    "GL_FLOAT requires 32-bit float.");
+
+static_assert(sizeof(Vec3) == 3 * sizeof(float),
+    "Unexpected size of Vec3 class.");
+
+static_assert(sizeof(Vec2) == 2 * sizeof(float),
+    "Unexpected size of Vec2 class.");
+    
+static_assert(std::is_standard_layout_v<Vertex>,
+    "Vertex struct must have a standard layout to be compatible with Vertex attributes.");
 
 struct FaceVertex
 {
@@ -44,6 +62,7 @@ struct Face
 {
     std::vector<FaceVertex> vertices;
     std::string matName;
+    unsigned int matIndex;
 };
 
 class Model
@@ -59,7 +78,6 @@ class Model
         std::map<std::string, unsigned int> _materialLookup;
 
         std::vector<Vertex> _vertices;
-        std::vector<SubMesh> _subMeshes;
 
         std::string _pathToFile;
         std::string _objDirectory;
@@ -76,6 +94,11 @@ class Model
         Vec3 _boundsMax;
         Vec3 _center;
 
+        Model(const Model&) = delete;
+        Model& operator=(const Model&) = delete;
+
+        bool buildRenderData();
+        void clearCPUData();
         void setError(const std::string& msg, unsigned int lineNumber = 0);
 
         bool parseOBJ(const std::string& filename);
@@ -95,8 +118,8 @@ class Model
         static bool stringToInteger(const std::string& text, int& value);
         static bool resolveOBJIndex(int objIndex, std::size_t count, int& result);
 
-        bool validate() const;
-        bool validateFace(const Face& face, unsigned int faceNumber) const;
+        bool validate();
+        bool validateFace(const Face& face, unsigned int faceNumber);
 
         bool calculateBounds();
         void centerAndNormalize();
@@ -123,25 +146,18 @@ class Model
         void releaseGPU();
 
         void draw() const;
-        void drawSubMesh(unsigned int SubMeshIndex) const;
 
         bool isLoaded() const;
         bool isUploaded() const;
         
         const std::vector<Vertex> &getVertices() const;
         const std::vector<Material> &getMaterials() const;
-        const std::vector<SubMesh> &getSubMeshes() const;
         const std::string &getError() const;
         const std::string &getObjName() const;
 
-        void clearCPUData();
-        bool buildRenderData();
 };
 
-bool isValidVector(Vec3 vec);
-bool isValidVector(Vec2 vec);
-bool isFinite(float value);
-
-std::string numberToString(unsigned int value);
+bool isValidVector(const Vec3& vec);
+bool isValidVector(const Vec2& vec);
 
 #endif

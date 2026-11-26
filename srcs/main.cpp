@@ -58,7 +58,7 @@ int main(int argc, char** argv)
     }
     all.prog->use();
 
-    if (!all.objModel->buildRenderData())
+    if (!all.objModel->uploadToGPU())
     {
         std::cerr << all.objModel->getError() << std::endl;
         delete all.objModel;

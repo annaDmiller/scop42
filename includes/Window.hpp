@@ -15,8 +15,8 @@ class Window
         int _width;
         int _height;
 
-        static void framebufferSizeCallback(GLFWwindow*, int, int);
-        static void mouseCallback(GLFWwindow*, float, float);
+        static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+        static void mouseCallback(GLFWwindow* window, double xPos, double yPos);
 
     public:
         Window();

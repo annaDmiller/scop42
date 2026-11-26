@@ -13,7 +13,7 @@ Window::~Window()
 
 bool Window::create(const int width, const int height, const std::string& title, std::string& error)
 {
-    if(!glfwInit())
+    if(glfwInit() != GLFW_TRUE)
     {
         error = "GLFW initialization failed.";
         return false;
@@ -39,13 +39,6 @@ bool Window::create(const int width, const int height, const std::string& title,
     glfwSetFramebufferSizeCallback(_handle, framebufferSizeCallback);
     glfwSetCursorPosCallback(_handle, mouseCallback);
     glfwSetInputMode(_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        error = "GLAD could not load OpenGL functions.";
-        return false;
-    }
-
     
     glViewport(0, 0, width, height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -64,7 +57,7 @@ void Window::framebufferSizeCallback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void Window::mouseCallback(GLFWwindow* window, float xPos, float yPos)
+void Window::mouseCallback(GLFWwindow* window, double xPos, double yPos)
 {
 
 }

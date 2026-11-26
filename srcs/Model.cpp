@@ -1,11 +1,18 @@
 #include <Model.hpp>
 
+namespace {
+    void stripComment(std::string& line)
+    {
+        const std::size_t pos = line.find('#');
+        if (pos != std::string::npos)
+            line.erase(pos);
+    }
+}
+
 Model::Model()
-    : _boundsMin(), _boundsMax(),
-    _vao(0), _vbo(0), _loaded(false), _uploaded(false)
+    : _vao(0), _vbo(0), _loaded(false), _uploaded(false)
 {
-    Material defaultMaterial;
-    addMaterial(defaultMaterial);
+    clearCPUData();
 }
 
 Model::Model(const std::string& pathToFile)
@@ -13,15 +20,12 @@ Model::Model(const std::string& pathToFile)
     _vao(0), _vbo(0), _loaded(false), _uploaded(false),
     _pathToFile(pathToFile)
 {
-    Material defaultMaterial;
-    addMaterial(defaultMaterial);
     load(pathToFile);
 }
 
 Model::~Model()
 {
-    // clear all the rendering data
-    clearCPUData();
+    releaseGPU();
 }
 
 void Model::clearCPUData()
@@ -34,12 +38,16 @@ void Model::clearCPUData()
     _materials.clear();
     _materialLookup.clear();
     _vertices.clear();
-    _subMeshes.clear();
 
     Material defaultMaterial;
     addMaterial(defaultMaterial);
 
     _loaded = false;
+    _currMat.clear();
+    _objectName = "SCOP";
+    _boundsMin = Vec3();
+    _boundsMax = Vec3();
+    _center = Vec3();
     _error.clear();
 }
 
@@ -54,7 +62,11 @@ void Model::setError(const std::string& msg, unsigned int lineNumber)
 
 bool Model::load(const std::string& filename)
 {
-    releaseGPU();
+    if (_uploaded)
+    {
+        setError("Release GPU resources before reloading the model.");
+        return false;
+    }
     clearCPUData();
 
     _pathToFile = filename;
@@ -77,6 +89,9 @@ bool Model::load(const std::string& filename)
         return false;
 
     centerAndNormalize();
+    
+    if (!buildRenderData())
+        return false;
 
     if (_vertices.empty())
     {
@@ -102,7 +117,6 @@ bool Model::parseOBJ(const std::string& filename)
     }
 
     std::string line;
-    std::string currMaterial;
     unsigned int lineNumber = 0;
 
     std::map<std::string, ParserFunction> types = {
@@ -118,7 +132,7 @@ bool Model::parseOBJ(const std::string& filename)
     while (std::getline(file, line))
     {
         ++lineNumber;
-        remove_if(line.begin(), line.end(), isspace);
+        stripComment(line);
         if (line.empty() || line[0] == '#')
             continue ;
 
@@ -226,10 +240,11 @@ bool Model::parseObjectName(std::stringstream& ss, unsigned int lineNumber)
 bool Model::parseMtlLib(std::stringstream& ss, unsigned int lineNumber)
 {
     std::string lib;
+    const std::size_t prevCount = _matLibs.size();
     while (ss >> lib)
         _matLibs.push_back(lib);
 
-    if (_matLibs.empty())
+    if (_matLibs.size() == prevCount)
     {
         setError("mtllib directive does not specify the material library filename.", lineNumber);
         return false;
@@ -253,6 +268,7 @@ bool Model::parseFace(std::stringstream& ss, unsigned int lineNumber)
     std::string token;
     Face face;
     face.matName = _currMat;
+    face.matIndex = 0;
 
     while (ss >> token)
     {
@@ -345,7 +361,6 @@ bool Model::parseFaceVertex(const std::string& token, FaceVertex& result, unsign
 
 bool Model::parseMTL(const std::string& libPath)
 {
-    _currMat = directoryOf(libPath);
     std::ifstream file(libPath.c_str());
     if (!file.is_open())
     {
@@ -360,7 +375,7 @@ bool Model::parseMTL(const std::string& libPath)
     while (std::getline(file, line))
     {
         ++lineNumber;
-        remove_if(line.begin(), line.end(), isspace);
+        stripComment(line);
         if (line.empty() || line[0] == '#')
             continue ;
 
@@ -465,17 +480,17 @@ bool Model::resolveOBJIndex(int objIndex, std::size_t count, int& result)
     return true;
 }
 
-bool Model::validate() const
+bool Model::validate()
 {
     if (_positions.empty())
     {
-        const_cast<Model *>(this)->setError("OBJ file contains no valid vertex positions.");
+        setError("OBJ file contains no valid vertex positions.");
         return false;
     }
 
     if (_faces.empty())
     {
-        const_cast<Model *>(this)->setError("OBJ file contaians no faces information.");
+        setError("OBJ file contaians no faces information.");
         return false;
     }
 
@@ -488,22 +503,22 @@ bool Model::validate() const
     return true;
 }
 
-bool Model::validateFace(const Face& face, unsigned int faceNumber) const
+bool Model::validateFace(const Face& face, unsigned int faceNumber) 
 {
     if (face.vertices.size() < 3)
     {
-        const_cast<Model*>(this)->setError("Face can't have less than 3 vertices in 3D model.");
+        setError("Face can't have less than 3 vertices in 3D model.");
         return false;
     }
 
     for (std::size_t ind = 0; ind < face.vertices.size(); ind++)
     {
         const FaceVertex& v = face.vertices[ind];
-        std::string faceNumberStr = numberToString(faceNumber);
+        std::string faceNumberStr = std::to_string(faceNumber);
         if (v.positionIndex < 0 || 
             static_cast<std::size_t>(v.positionIndex) >= _positions.size())
         {
-            const_cast<Model*>(this)->setError(
+            setError(
                 "Face " + faceNumberStr + " has an invalid position index.");
             return false;
         }
@@ -512,7 +527,7 @@ bool Model::validateFace(const Face& face, unsigned int faceNumber) const
             (v.texCoordIndex < 0 ||
             static_cast<std::size_t>(v.texCoordIndex) >= _texCoords.size()))
         {
-            const_cast<Model*>(this)->setError(
+            setError(
                 "Face " + faceNumberStr + " has an invalid texture coordinate index.");
             return false;
         }
@@ -521,7 +536,7 @@ bool Model::validateFace(const Face& face, unsigned int faceNumber) const
             (v.normalIndex < 0 || 
             static_cast<std::size_t>(v.normalIndex) >= _normals.size()))
         {
-            const_cast<Model*>(this)->setError(
+            setError(
                 "Face " + faceNumberStr + " has an invalid normal index.");
             return false;
         }
@@ -577,10 +592,10 @@ void Model::centerAndNormalize()
 bool Model::buildRenderData()
 {
     _vertices.clear();
-    _subMeshes.clear();
 
     for (std::size_t ind = 0; ind < _faces.size(); ind++)
     {
+        _faces[ind].matIndex = findMaterial(_faces[ind].matName);
         if (!appendFaceTriangles(_faces[ind], static_cast<unsigned int>(ind + 1)))
             return false;
     }
@@ -590,8 +605,8 @@ bool Model::buildRenderData()
 
 bool Model::appendFaceTriangles(const Face& face, unsigned int faceNumber)
 {
-    const unsigned int materialIndex = findMaterial(face.matName);
-    if (materialIndex == 0 && !face.matName.empty())
+    const unsigned int materialIndex = face.matIndex;
+    if (!face.matName.empty() && _materialLookup.find(face.matName) == _materialLookup.end())
     {
         //Using the default material
         //Create default material and add it to the material
@@ -615,48 +630,175 @@ bool Model::appendTriangle(const FaceVertex& a, const FaceVertex& b, const FaceV
     const Vec3& pb = _positions[b.positionIndex];
     const Vec3& pc = _positions[c.positionIndex];
 
-    const Vec3 generatedNormal = faceNormal(pa, pb, pc);
-    if (generatedNormal.length() <= 1.0e-8f)
+    const Vec3 cross = faceNormal(pa, pb, pc);
+    if (!cross.isValidVector() || cross.length() <= 1.0e-8f)
     {
-        setError("Degenerate triangle in face " + numberToString(faceNumber) + ".");
+        setError("Degenerate triangle in face " + std::to_string(faceNumber) + ".");
         return false;
     }
 
+    const Vec3 normal = cross.normalized();
     const Material& material = _materials[materialIndex];
-    // Submeshes are conriguous runs of faces using the same material
-    if (_subMeshes.empty() || _subMeshes.back().materialIndex != materialIndex)
-    {
-        SubMesh subMesh;
-        subMesh.firstVertex = static_cast<unsigned int>(_vertices.size());
-        subMesh.vertexCount = 0;
-        subMesh.materialIndex = materialIndex;
-        _subMeshes.push_back(subMesh);
-    }
-
-    const FaceVertex faceVertices[3] = { a, b, c };
+    const FaceVertex corners[3] = { a, b, c };
+    const float nx = std::fabs(normal.getX());
+    const float ny = std::fabs(normal.getY());
+    const float nz = std::fabs(normal.getZ());
     for (int ind = 0; ind < 3; ind++)
     {
-        const FaceVertex &src = faceVertices[ind];
+        const FaceVertex &src = corners[ind];
+        const Vec3& p = _positions[src.positionIndex];
         Vertex vertex;
-
-        vertex.position = _positions[src.positionIndex];
-        if (src.normalIndex >= 0)
-            vertex.normal = _normals[src.normalIndex].normalized();
-        else
-            vertex.normal = generatedNormal;
-
+        vertex.position = p;
+        vertex.normal = normal;
         if (src.texCoordIndex >= 0)
-            vertex.texCoord = _texCoords[src.texCoordIndex];
+        {
+            const Vec2& uv = _texCoords[src.texCoordIndex];
+            vertex.texCoord = uv;
+        }
         else
-            vertex.texCoord = Vec2();
+        {
+            float u, v;
+            if (nx >= ny && nx >= nz)
+            {
+                u = p.getZ();
+                v = p.getY();
+            }
+            else if (ny >= nz)
+            {
+                u = p.getX();
+                v = p.getZ();
+            }
+            else
+            {
+                u = p.getX();
+                v = p.getY();
+            }
+            vertex.texCoord = Vec2((u + 1.0f) * 0.5f, (v + 1.0f) * 0.5f);
+        }
 
-        vertex.color = material.getDiffuse();
-        _subMeshes.back().vertexCount++;
+        vertex.ambient = material.getAmbient();
+        vertex.diffuse = material.getDiffuse();
+        vertex.specular = material.getSpecular();
+        vertex.shininess = material.getShininess();
+
+        _vertices.push_back(vertex);
     }
 
     return true;
 }
 
+bool Model::uploadToGPU()
+{
+    if (!_loaded || _vertices.empty())
+    {
+        setError("Cannot upload the model: no CPU-side model data is loaded.");
+        return false;
+    }
+
+    if (_uploaded)
+        return true;
+
+    if (_vertices.size() > static_cast<std::size_t>(INT_MAX) ||
+        _vertices.size() > static_cast<std::size_t>(std::numeric_limits<GLsizeiptr>::max()) / sizeof(Vertex))
+    {
+        setError("Model exceeds OpenGL buffer or draw count limits.");
+        return false;
+    }
+
+    glGenVertexArrays(1, &_vao);
+    glGenBuffers(1, &_vbo);
+    if (_vao == 0 || _vbo == 0)
+    {
+        _error = "Failed to generate VAO or VBO.";
+        releaseGPU();
+        return false;
+    }
+
+    glBindVertexArray(_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(_vertices.size() * sizeof(Vertex)),
+                 _vertices.data(), GL_STATIC_DRAW);
+    
+                 const std::size_t offsets[] = {
+        offsetof(Vertex, position), offsetof(Vertex, normal),
+        offsetof(Vertex, texCoord), offsetof(Vertex, ambient),
+        offsetof(Vertex, diffuse), offsetof(Vertex, specular),
+        offsetof(Vertex, shininess)
+    };
+    const GLint sizes[] = { 3, 3, 2, 3, 3, 3, 1 };
+
+    for (GLuint ind = 0; ind < 7; ind++)
+    {
+        glVertexAttribPointer(ind, sizes[ind], GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<const void*>(offsets[ind]));
+        glEnableVertexAttribArray(ind);
+    }
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    if (glGetError() != GL_NO_ERROR)
+    {
+        releaseGPU();
+        setError("OpenGL error during upload (or pending earlier GL error).");
+        return false;
+    }
+
+    _uploaded = true;
+    _error.clear();
+    return true;
+}
+
+void Model::releaseGPU()
+{
+    if (_vbo)
+        glDeleteBuffers(1, &_vbo);
+    
+    if (_vao)
+        glDeleteVertexArrays(1, &_vao);
+
+    _vao = _vbo = 0;
+    _uploaded = false;
+}
+
+void Model::draw() const
+{
+    if (!_uploaded)
+        return ;
+
+    glBindVertexArray(_vao);
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(_vertices.size()));
+    glBindVertexArray(0);
+}
+
+bool Model::isLoaded() const
+{
+    return _loaded;
+}
+
+bool Model::isUploaded() const
+{
+    return _uploaded;
+}
+
+const std::vector<Vertex>& Model::getVertices() const
+{
+    return _vertices;
+}
+
+const std::vector<Material>& Model::getMaterials() const
+{
+    return _materials;
+}
+
+const std::string& Model::getError() const
+{
+    return _error;
+}
+
+const std::string& Model::getObjName() const
+{
+    return _objectName;
+}
 unsigned int Model::findMaterial(const std::string& name) const
 {
     if (name.empty())
@@ -693,19 +835,12 @@ Vec3 Model::faceNormal(const Vec3& a, const Vec3& b, const Vec3& c)
     return Vec3::cross((b - a), (c - a)).normalized();
 }
 
-bool isValidVector(Vec3 vec)
+bool isValidVector(const Vec3& vec)
 {
     return (vec.isValidVector());
 }
 
-bool isValidVector(Vec2 vec)
+bool isValidVector(const Vec2& vec)
 {
     return (vec.isValidVector());
-}
-
-std::string numberToString(unsigned int value)
-{
-    std::ostringstream out;
-    out << value;
-    return out.str();
 }
